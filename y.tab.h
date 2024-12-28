@@ -17,9 +17,9 @@
 #ifndef YYSTYPE_IS_DECLARED
 #define YYSTYPE_IS_DECLARED 1
 typedef union YYSTYPE {
-    int intval;      /* For integer values*/
-    char *strval;    /* For string (identifier) values*/
-    item Item;       /* For item struct*/
+    int intval;      /* To store integer values*/
+    char *strval;    /* To store string values*/
+    item Item;       /* To store item structs*/
 } YYSTYPE;
 #endif /* !YYSTYPE_IS_DECLARED */
 extern YYSTYPE yylval;

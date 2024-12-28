@@ -448,11 +448,11 @@ int yy_flex_debug = 0;
 char *yytext;
 #line 1 "cse351.l"
 #line 2 "cse351.l"
-        #include "item_type.h"
+    #include "item_type.h" // Item struct for later usage in symbol table.
     #include "y.tab.h"
     #include <string>
     using namespace std;
-    int linenum = 1; // Line number tracker
+    int linenum = 1; // Line number tracker for error messages.
     
 #line 458 "lex.yy.c"
 #line 459 "lex.yy.c"

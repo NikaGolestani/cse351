@@ -1,9 +1,9 @@
 %{
-        #include "item_type.h"
+    #include "item_type.h" // Item struct for later usage in symbol table.
     #include "y.tab.h"
     #include <string>
     using namespace std;
-    int linenum = 1; // Line number tracker
+    int linenum = 1; // Line number tracker for error messages.
     
 %}
 

@@ -23,11 +23,11 @@
 #line 2 "cse351.y"
     #include <iostream>
     #include <string>
-    #include <unordered_map> /* For the symbol table*/
-    #include <cstdio>         /* For fopen, fclose*/
-    #include <cstdlib>        /* For exit()*/
-	#include <cmath>
-    
+    #include <unordered_map>
+    #include <cstdio>
+    #include <cstdlib>
+    #include <cmath>
+
     using namespace std;
 
     extern FILE *yyin;
@@ -36,14 +36,14 @@
 
     void yyerror(const string &s);
 
-    /* Define the item struct, ensure it's declared before use*/
+    /* Define the item struct to manage constants and identifiers*/
     struct item {
-        bool is_constant;
-        int value;
+        bool is_constant; /* True if the value is a constant; false for identifiers*/
+        int value;        /* The value of the constant or ASCII value of the identifier*/
     };
 
-    /* Declare the symbol table as an unordered_map*/
-    unordered_map<string, item> symbol_table; /* Store identifiers and their values*/
+    /* Symbol table to store identifiers and their associated values*/
+    unordered_map<string, item> symbol_table;
 #ifdef YYSTYPE
 #undef  YYSTYPE_IS_DECLARED
 #define YYSTYPE_IS_DECLARED 1
@@ -52,9 +52,9 @@
 #define YYSTYPE_IS_DECLARED 1
 #line 27 "cse351.y"
 typedef union YYSTYPE {
-    int intval;      /* For integer values*/
-    char *strval;    /* For string (identifier) values*/
-    item Item;       /* For item struct*/
+    int intval;      /* To store integer values*/
+    char *strval;    /* To store string values*/
+    item Item;       /* To store item structs*/
 } YYSTYPE;
 #endif /* !YYSTYPE_IS_DECLARED */
 #line 61 "y.tab.c"
@@ -328,16 +328,19 @@ static YYINT  *yylexp = 0;
 
 static YYINT  *yylexemes = 0;
 #endif /* YYBTYACC */
-#line 278 "cse351.y"
+#line 225 "cse351.y"
 
+// Error handling function
 void yyerror(const string &s) {
     cerr << "Error at line " << linenum << ": " << s << endl;
     exit(1);
 }
 
 int yywrap() {
-    return 1; // End of file or input stream handling
+    return 1; // Indicates end of input
 }
+
+// Helper function to check if a string is numeric
 bool is_integer(const string &s) {
     if (s.empty()) return false;
     for (char c : s) {
@@ -369,7 +372,7 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-#line 373 "y.tab.c"
+#line 376 "y.tab.c"
 
 /* For use in generated program */
 #define yydepth (int)(yystack.s_mark - yystack.s_base)
@@ -1040,247 +1043,189 @@ yyreduce:
     switch (yyn)
     {
 case 4:
-#line 53 "cse351.y"
+#line 57 "cse351.y"
 	{
         string id(yystack.l_mark[-3].strval); /* Convert IDENTIFIER to string*/
 
-        /* Check if oper (i.e., $3) is an expression or a single identifier*/
+        /* Check if oper (right-hand side) is an expression or a single value*/
         if (is_integer(yystack.l_mark[-1].strval)) {
-            /* If oper is a number, assign it as a constant*/
-            symbol_table[id] = item{true, stoi(yystack.l_mark[-1].strval)}; /* Store as constant*/
+            /* If oper is a number, store it as a constant*/
+            symbol_table[id] = item{true, stoi(yystack.l_mark[-1].strval)};
         } else if (strlen(yystack.l_mark[-1].strval) == 1) {
-            /* If $3 is a single character (e.g., identifier), assign its ASCII value*/
+            /* If oper is a single character, store its ASCII value*/
             string operand(yystack.l_mark[-1].strval);
-            symbol_table[id] = item{false, static_cast<int>(operand[0])}; /* Use ASCII value of operand*/
-        } 
+            symbol_table[id] = item{false, static_cast<int>(operand[0])};
+        }
 
+        /* Print the assignment result*/
         cout << id << "=" << yystack.l_mark[-1].strval << endl;
-        free(yystack.l_mark[-3].strval); /* Free memory allocated for IDENTIFIER*/
+
+        free(yystack.l_mark[-3].strval); /* Free allocated memory for IDENTIFIER*/
     }
-#line 1061 "y.tab.c"
+#line 1066 "y.tab.c"
 break;
 case 5:
-#line 73 "cse351.y"
+#line 81 "cse351.y"
 	{
-    if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
-        /* If both operands are constants, add them and store as a string*/
-        string result = to_string(yystack.l_mark[-2].Item.value + yystack.l_mark[0].Item.value);  /* Add constants and store result as string*/
-        yyval.strval = strdup(result.c_str());  /* Convert to char* and store in $$ (use strdup to copy)*/
-    }
-    else {
-        /* Handle the non-constant operands by converting them to strings*/
-        string result;
-
-        /* Process first operand*/
-        if (yystack.l_mark[-2].Item.is_constant) {
-            if (yystack.l_mark[-2].Item.value != 0) {
-                result = to_string(yystack.l_mark[-2].Item.value);  /* Convert constant value to string (skip if zero)*/
-            }
+        if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
+            /* Fold the constants and return the result as a string*/
+            string result = to_string(yystack.l_mark[-2].Item.value + yystack.l_mark[0].Item.value);
+            yyval.strval = strdup(result.c_str());
         } else {
-            result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));  /* Convert ASCII value to character*/
-        }
+            /* Construct the expression with simplifications*/
+            string result;
 
-         if (yystack.l_mark[0].Item.value != 0 && !result.empty()) {
-            result += "+";  
-        }
+            if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[-2].Item.value != 0) result = to_string(yystack.l_mark[-2].Item.value);
+            else result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
 
-        /* Process second operand*/
-        if (yystack.l_mark[0].Item.is_constant) {
-            if (yystack.l_mark[0].Item.value != 0) {
-                result += to_string(yystack.l_mark[0].Item.value);  /* Convert constant value to string (skip if zero)*/
-            }
-        } else {
-			
-            result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));  
+            if (yystack.l_mark[0].Item.value != 0 && !result.empty()) result += "+";
+
+            if (yystack.l_mark[0].Item.is_constant && yystack.l_mark[0].Item.value != 0) result += to_string(yystack.l_mark[0].Item.value);
+            else result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));
+
+            yyval.strval = strdup(result.c_str());
         }
-        yyval.strval = strdup(result.c_str());
     }
-}
-#line 1100 "y.tab.c"
+#line 1090 "y.tab.c"
 break;
 case 6:
-#line 111 "cse351.y"
+#line 102 "cse351.y"
 	{
-    if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
-        /* If both operands are constants, add them and store as a string*/
-        string result = to_string(yystack.l_mark[-2].Item.value * yystack.l_mark[0].Item.value);  /* Add constants and store result as string*/
-        yyval.strval = strdup(result.c_str());  /* Convert to char* and store in $$ (use strdup to copy)*/
-    }
-    else {
-        /* Handle the non-constant operands by converting them to strings*/
-        string result;
-
-        /* Process first operand*/
-        if (yystack.l_mark[-2].Item.is_constant) {
-            if (yystack.l_mark[-2].Item.value != 1) {
-                result = to_string(yystack.l_mark[-2].Item.value);  /* Convert constant value to string (skip if zero)*/
-            }
+        if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
+            /* Multiply constants and return the result*/
+            string result = to_string(yystack.l_mark[-2].Item.value * yystack.l_mark[0].Item.value);
+            yyval.strval = strdup(result.c_str());
         } else {
-            result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));  /* Convert ASCII value to character*/
-        }
+            /* Construct the multiplication expression*/
+            string result;
 
-         if (yystack.l_mark[0].Item.value != 1 && !result.empty()) {
-            result += "*";  
-        }
+            if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[-2].Item.value != 1) result = to_string(yystack.l_mark[-2].Item.value);
+            else result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
 
-        /* Process second operand*/
-        if (yystack.l_mark[0].Item.is_constant) {
+            if (yystack.l_mark[0].Item.value != 1 && !result.empty()) result += "*";
 
-            if (yystack.l_mark[0].Item.value != 1) {
-                result += to_string(yystack.l_mark[0].Item.value);  /* Convert constant value to string (skip if zero)*/
-            }
-        } else {
-			
-            result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));  
+            if (yystack.l_mark[0].Item.is_constant && yystack.l_mark[0].Item.value != 1) result += to_string(yystack.l_mark[0].Item.value);
+            else result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));
+
+            if (yystack.l_mark[0].Item.value == 0 || yystack.l_mark[-2].Item.value == 0) result = to_string(0); /* Handle zero multiplication*/
+
+            yyval.strval = strdup(result.c_str());
         }
-	if (yystack.l_mark[0].Item.value == 0 || yystack.l_mark[-2].Item.value == 0) {
-        result = to_string(0);  /* Convert constant value to string (skip if one)*/
-        }
-        yyval.strval = strdup(result.c_str());
     }
-}
-#line 1143 "y.tab.c"
+#line 1116 "y.tab.c"
 break;
 case 7:
-#line 151 "cse351.y"
+#line 125 "cse351.y"
 	{
         if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
-            /* If both operands are constants, divide them and store as a string*/
-            if (yystack.l_mark[0].Item.value != 0) {  /* Check for division by zero*/
-                string result = to_string(yystack.l_mark[-2].Item.value / yystack.l_mark[0].Item.value);  /* Divide constants and store result as string*/
+            /* Handle constant division with zero check*/
+            if (yystack.l_mark[0].Item.value != 0) {
+                string result = to_string(yystack.l_mark[-2].Item.value / yystack.l_mark[0].Item.value);
                 yyval.strval = strdup(result.c_str());
             } else {
-                yyerror("Division by zero");  /* Handle division by zero*/
+                yyerror("Division by zero");
             }
-        }
-        else {
-            /* Handle the non-constant operands by converting them to strings*/
+        } else {
+            /* Build the division expression*/
             string result;
 
-            /* Process first operand*/
-            if (yystack.l_mark[-2].Item.is_constant) {
-                result = to_string(yystack.l_mark[-2].Item.value);  /* Convert constant value to string*/
-            } else {
-                result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));  /* Convert ASCII value to character*/
-            }
+            if (yystack.l_mark[-2].Item.is_constant) result = to_string(yystack.l_mark[-2].Item.value);
+            else result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
 
-            result += "/";  /* Add the division sign*/
+            result += "/";
 
-            /* Process second operand*/
-            if (yystack.l_mark[0].Item.is_constant) {
-                result += to_string(yystack.l_mark[0].Item.value);  /* Convert constant value to string*/
-            } else {
-                result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));  /* Convert ASCII value to character*/
-            }
+            if (yystack.l_mark[0].Item.is_constant) result += to_string(yystack.l_mark[0].Item.value);
+            else result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));
 
-            yyval.strval = strdup(result.c_str());  /* Convert to char* and store in $$ (use strdup to copy)*/
+            yyval.strval = strdup(result.c_str());
         }
     }
-#line 1180 "y.tab.c"
+#line 1144 "y.tab.c"
 break;
 case 8:
-#line 186 "cse351.y"
+#line 150 "cse351.y"
 	{
         if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
-            /* If both operands are constants, subtract them and store as a string*/
-            string result = to_string(yystack.l_mark[-2].Item.value - yystack.l_mark[0].Item.value);  /* Subtract constants and store result as string*/
-            yyval.strval = strdup(result.c_str()); 
-        }
-        else {
-            /* Handle the non-constant operands by converting them to strings*/
+            /* Perform constant subtraction*/
+            string result = to_string(yystack.l_mark[-2].Item.value - yystack.l_mark[0].Item.value);
+            yyval.strval = strdup(result.c_str());
+        } else {
+            /* Construct the subtraction expression*/
             string result;
 
-            /* Process first operand*/
-            if (yystack.l_mark[-2].Item.is_constant) {
-                result = to_string(yystack.l_mark[-2].Item.value);  /* Convert constant value to string*/
-            } else {
-                result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));  /* Convert ASCII value to character*/
-            }
+            if (yystack.l_mark[-2].Item.is_constant) result = to_string(yystack.l_mark[-2].Item.value);
+            else result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
 
-            result += "-";  /* Add the subtraction sign*/
+            result += "-";
 
-            /* Process second operand*/
-            if (yystack.l_mark[0].Item.is_constant) {
-                result += to_string(yystack.l_mark[0].Item.value);  /* Convert constant value to string*/
-            } else {
-                result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));  /* Convert ASCII value to character*/
-            }
+            if (yystack.l_mark[0].Item.is_constant) result += to_string(yystack.l_mark[0].Item.value);
+            else result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));
 
-            yyval.strval = strdup(result.c_str());  /* Convert to char* and store in $$ (use strdup to copy)*/
+            yyval.strval = strdup(result.c_str());
         }
+    }
+#line 1168 "y.tab.c"
+break;
+case 9:
+#line 171 "cse351.y"
+	{
+        if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
+            /* Perform constant exponentiation*/
+            string result = to_string(static_cast<int>(pow(yystack.l_mark[-2].Item.value, yystack.l_mark[0].Item.value)));
+            yyval.strval = strdup(result.c_str());
+        } else {
+            /* Build the exponentiation expression with simplifications*/
+            string result;
+
+            if (yystack.l_mark[-2].Item.is_constant) result = to_string(yystack.l_mark[-2].Item.value);
+            else result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
+
+            result += "^";
+
+            if (yystack.l_mark[0].Item.is_constant) {
+                if (yystack.l_mark[0].Item.value == 2) result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value)) + "*" + string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
+                else if (yystack.l_mark[0].Item.value == 1) result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
+                else result += to_string(yystack.l_mark[0].Item.value);
+            } else {
+                result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));
+            }
+
+            yyval.strval = strdup(result.c_str());
+        }
+    }
+#line 1197 "y.tab.c"
+break;
+case 10:
+#line 197 "cse351.y"
+	{
+        /* Base case: Return a constant or identifier as-is*/
+        if (yystack.l_mark[0].Item.is_constant) yyval.strval = strdup(to_string(yystack.l_mark[0].Item.value).c_str());
+        else yyval.strval = strdup(string(1, static_cast<char>(yystack.l_mark[0].Item.value)).c_str());
+    }
+#line 1206 "y.tab.c"
+break;
+case 11:
+#line 208 "cse351.y"
+	{
+        yyval.Item = item{true, yystack.l_mark[0].intval}; /* Store constant*/
     }
 #line 1213 "y.tab.c"
 break;
-case 9:
-#line 216 "cse351.y"
-	{
-		if (yystack.l_mark[-2].Item.is_constant && yystack.l_mark[0].Item.is_constant) {
-        /* If both operands are constants, perform exponentiation*/
-		string result = to_string(static_cast<int>(pow(yystack.l_mark[-2].Item.value, yystack.l_mark[0].Item.value)));
-        yyval.strval = strdup(result.c_str());
-    }
-    else {
-        /* Handle the non-constant operands by converting them to strings*/
-        string result;
-
-        /* Process first operand*/
-        if (yystack.l_mark[-2].Item.is_constant) {
-            result = to_string(yystack.l_mark[-2].Item.value);  /* Convert constant value to string*/
-        } else {
-            result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));  /* Convert ASCII value to character*/
-        }
-
-        result += "^";  /* Add the exponentiation sign*/
-
-        /* Process second operand*/
-        if (yystack.l_mark[0].Item.is_constant) {
-			if (yystack.l_mark[0].Item.value==2){
-				result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value))+"*"+string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
-			}
-            else if(yystack.l_mark[0].Item.value==1)
-				result = string(1, static_cast<char>(yystack.l_mark[-2].Item.value));
-			else
-			    result += to_string(yystack.l_mark[0].Item.value);
-        } else {
-            result += string(1, static_cast<char>(yystack.l_mark[0].Item.value));  /* Convert ASCII value to character*/
-        }
-
-        yyval.strval = strdup(result.c_str());  /* Convert to char* and store in $$ (use strdup to copy)*/
-    }
-	}
-#line 1252 "y.tab.c"
-break;
-case 10:
-#line 253 "cse351.y"
-	{
-        /* This is for the base case, where X is just a constant or identifier*/
-        if (yystack.l_mark[0].Item.is_constant) {
-            yyval.strval = strdup(to_string(yystack.l_mark[0].Item.value).c_str());  /* Convert constant to string*/
-        } else {
-            yyval.strval = strdup(string(1, static_cast<char>(yystack.l_mark[0].Item.value)).c_str());  /* Convert ASCII to character and store*/
-        }
-    }
-#line 1264 "y.tab.c"
-break;
-case 11:
-#line 265 "cse351.y"
-	{
-        yyval.Item = item{true, yystack.l_mark[0].intval}; /* Initialize Item with integer value*/
-    }
-#line 1271 "y.tab.c"
-break;
 case 12:
-#line 269 "cse351.y"
+#line 212 "cse351.y"
 	{
-		string id(yystack.l_mark[0].strval); /* Convert IDENTIFIER to string*/
-		if (symbol_table.find(id) == symbol_table.end()) {
-			symbol_table[id] = item{false, static_cast<int>(id[0])}; /* Store ASCII value as default*/
-		}
-		yyval.Item = symbol_table[id]; 
-	}
-#line 1282 "y.tab.c"
+        string id(yystack.l_mark[0].strval);
+
+        if (symbol_table.find(id) == symbol_table.end()) {
+            /* Initialize undefined identifier with its ASCII value*/
+            symbol_table[id] = item{false, static_cast<int>(id[0])};
+        }
+
+        yyval.Item = symbol_table[id];
+    }
+#line 1227 "y.tab.c"
 break;
-#line 1284 "y.tab.c"
+#line 1229 "y.tab.c"
     default:
         break;
     }
